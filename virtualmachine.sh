@@ -1,0 +1,18 @@
+#!/bin/bash -e
+AMIID="$(aws ec2 describe-images --region us-east-2 --image-id ami-0ada6d94f396377f2 --output text)"
+VPCID="$(aws ec2 describe-vpcs --filter "Name=isDefault, Values=true" --query "Vpcs[0].VpcId" --output text)"
+SUBNETID="$(aws ec2 describe-subnets --filters "Name=vpc-id, Values=$VPCID" --query "Subnets[0].SubnetId" --output text)"
+SGID="$(aws ec2 create-security-group --group-name laviesecuritygroup --description "My security group" --vpc-id "$VPCID" --output text)"
+aws ec2 authorize-security-group-ingress --group-id "$SGID" --protocol tcp --port 22 --cidr 0.0.0.0/0
+INSTANCEID="$(aws ec2 run-instances --image-id ami-0ada6d94f396377f2 --key-name  --instance-type t2.micro --security-group-ids "$SGID" --subnet-id "$SUBNETID" --query "Instances[0].InstanceId" --output text)"
+echo "waiting for $INSTANCEID ..."
+aws ec2 wait instance-running --instance-ids "$INSTANCEID"
+PUBLICNAME="$(aws ec2 describe-instances --instance-ids "$INSTANCEID" --query "Reservations[0].Instances[0].PublicDnsName" --output text)"
+echo "$INSTANCEID is accepting SSH connections under $PUBLICNAME"
+echo "ssh -i ourlock.pem ec2-user@$PUBLICNAME"
+read -r -p "Press [Enter] key to terminate $INSTANCEID ..."
+aws ec2 terminate-instances --instance-ids "$INSTANCEID"
+echo "terminating $INSTANCEID ..."
+aws ec2 wait instance-terminated --instance-ids "$INSTANCEID"
+aws ec2 delete-security-group --group-id "$SGID"
+echo "done."

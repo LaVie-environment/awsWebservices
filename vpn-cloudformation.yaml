@@ -29,7 +29,7 @@ Parameters:
 Mappings:
   RegionMap:
     'us-east-2':
-      AMI: 'ami-0ea1d45dcdd47edf6'
+      AMI: 'ami-0d03b1ad793d7ac93'
 Resources:
   EC2Instance:
     Type: 'AWS::EC2::Instance'
